@@ -17,8 +17,8 @@ df = pd.DataFrame(tips)
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.chat_ui(id="chat", messages=[
-            """Welcome to the Shiny App! I can help you analyze the tippers dataset. What would you like to see? 
-            Here are some suggestions:
+"""Welcome to the Shiny App! I can help you analyze the tippers dataset. What would you like to see? 
+Here are some suggestions:
 
 - Show me the data table
 
@@ -80,24 +80,22 @@ def server(input, output, session):
         await process_commands(full_response.lower())
 
     async def process_commands(response_lower: str):
-        value_box_details = {
-            "total_tippers": {"title": "Total tippers", "icon": "user"},
-            "total_bill": {"title": "Total bill", "icon": "dollar-sign"},
-            "average_tip_percentage": {"title": "Average tip percentage", "icon": "percent"},
-            "average_bill": {"title": "Average bill", "icon": "dollar-sign"},
-        }
-
         commands = {
-            "show data table": lambda: add_element("data_table", get_ui_element("data_table")),
+            "show data table": lambda: add_element("data_table", get_data_table_ui()),
             "hide data table": lambda: remove_element("data_table"),
-            **{f"show {key.replace('_', ' ')}": lambda key=key: add_element(key, get_ui_element("value_box", title=value_box_details[key]["title"], output_id=key, icon_name=value_box_details[key]["icon"])) for key in value_box_details},
-            **{f"hide {key.replace('_', ' ')}": lambda key=key: remove_element(key) for key in value_box_details},
+            "show total tippers": lambda: add_element("total_tippers", get_total_tippers_ui()),
+            "hide total tippers": lambda: remove_element("total_tippers"),
+            "show total bill": lambda: add_element("total_bill", get_total_bill_ui()),
+            "hide total bill": lambda: remove_element("total_bill"),
+            "show average tip percentage": lambda: add_element("average_tip_percentage", get_average_tip_percentage_ui()),
+            "hide average tip percentage": lambda: remove_element("average_tip_percentage"),
+            "show average bill": lambda: add_element("average_bill", get_average_bill_ui()),
+            "hide average bill": lambda: remove_element("average_bill"),
         }
 
         if "show everything" in response_lower:
-            for cmd_key in value_box_details.keys():
-                commands[f"show {cmd_key.replace('_', ' ')}"]()
-            commands["show data table"]()
+            for cmd in ["show data table", "show total tippers", "show total bill", "show average tip percentage", "show average bill"]:
+                commands[cmd]()
             return
 
         if "hide everything" in response_lower:
@@ -109,9 +107,13 @@ def server(input, output, session):
             elements_to_hide_str = response_lower.split("hide elements:")[1].strip()
             elements_to_hide = [e.strip() for e in elements_to_hide_str.split(',')]
             
+            # Mapping user-friendly names to internal element IDs
             element_name_to_id = {
                 "data table": "data_table",
-                **{key.replace('_', ' '): key for key in value_box_details.keys()}
+                "total tippers": "total_tippers",
+                "total bill": "total_bill",
+                "average tip percentage": "average_tip_percentage",
+                "average bill": "average_bill",
             }
 
             for element_name in elements_to_hide:
@@ -191,21 +193,20 @@ def server(input, output, session):
             ui.remove_ui(selector=f"#{element_id}_wrapper")
             active_ui_elements.set(active_ui_elements() - {element_id})
 
- 
-    def get_ui_element(element_type: str, **kwargs):
-        if element_type == "data_table":
-            return ui.div(ui.h2("Data Table"), ui.output_data_frame("data_table"), id="data_table_wrapper")
-        elif element_type == "value_box":
-            output_id = kwargs.get("output_id") or ""
-            icon_name = kwargs.get("icon_name") or ""
-            return ui.div(
-                ui.value_box(
-                    kwargs.get("title"),
-                    ui.output_text(output_id),
-                    showcase=fa.icon_svg(icon_name)
-                ),
-                id=f"{output_id}_wrapper"
-            )
+    def get_data_table_ui():
+        return ui.div(ui.h2("Data Table"), ui.output_data_frame("data_table"), id=f"data_table_wrapper")
+
+    def get_total_tippers_ui():
+        return ui.div(ui.value_box("Total tippers", ui.output_text("total_tippers"), showcase=fa.icon_svg("user", "regular")), id=f"total_tippers_wrapper")
+
+    def get_total_bill_ui():
+        return ui.div(ui.value_box("Total bill", ui.output_text("total_bill"), showcase=fa.icon_svg("dollar-sign")), id=f"total_bill_wrapper")
+
+    def get_average_tip_percentage_ui():
+        return ui.div(ui.value_box("Average tip percentage", ui.output_text("average_tip_percentage"), showcase=fa.icon_svg("percent")), id=f"average_tip_percentage_wrapper")
+
+    def get_average_bill_ui():
+        return ui.div(ui.value_box("Average bill", ui.output_text("average_bill"), showcase=fa.icon_svg("dollar-sign")), id=f"average_bill_wrapper")
 
     @render.data_frame
     def data_table():
